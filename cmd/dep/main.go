@@ -262,6 +262,7 @@ var examples = [...][2]string{
 
 func fprintUsage(w io.Writer) {
 	fmt.Fprintln(w, "Dep is a tool for managing dependencies for Go projects")
+	fmt.Fprintln(w, "(My GOGS customized version)")
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Usage: \"dep [command]\"")
 	fmt.Fprintln(w)

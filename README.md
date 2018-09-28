@@ -1,3 +1,18 @@
+### How to use
+
+```sh
+% git clone https://github.com/neilli-sable/dep.git $GOPATH/src/github.com/golang/dep
+% cd $GOPATH/src/github.com/golang/dep
+% git checkout mygogs
+% go get -u github.com/golang/dep/cmd/dep
+% dep
+dep is a tool for managing dependencies for Go projects
+(My GOGS customized version)
+.
+.
+.
+```
+
 <p align="center"><img src="docs/assets/DigbyShadows.png" width="360"></p>
 <p align="center">
   <a href="https://travis-ci.org/golang/dep"><img src="https://travis-ci.org/golang/dep.svg?branch=master" alt="Build Status"></img></a>

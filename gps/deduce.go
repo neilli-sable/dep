@@ -74,6 +74,7 @@ var (
 	jazzRegex         = regexp.MustCompile(`^(?P<root>hub\.jazz\.net(/git/[a-z0-9]+/[A-Za-z0-9_.\-]+))((?:/[A-Za-z0-9_.\-]+)*)$`)
 	apacheRegex       = regexp.MustCompile(`^(?P<root>git\.apache\.org(/[a-z0-9_.\-]+\.git))((?:/[A-Za-z0-9_.\-]+)*)$`)
 	vcsExtensionRegex = regexp.MustCompile(`^(?P<root>([a-z0-9.\-]+\.)+[a-z0-9.\-]+(:[0-9]+)?/[A-Za-z0-9_.\-/~]*?\.(?P<vcs>bzr|git|hg|svn))((?:/[A-Za-z0-9_.\-]+)*)$`)
+	myGogsRegex       = regexp.MustCompile(`^(?P<root>gogs\.[A-Za-z0-9][-A-Za-z0-9]*\.[A-Za-z0-9][-A-Za-z0-9]*(/[A-Za-z0-9][-._A-Za-z0-9]*/[A-Za-z0-9_.\-]+))((?:/[A-Za-z0-9_.\-]+)*)$`)
 )
 
 // Other helper regexes
@@ -543,6 +544,34 @@ func (m vcsExtensionDeducer) deduceSource(path string, u *url.URL) (maybeSources
 	}
 }
 
+type myGogsDeducer struct {
+	regexp *regexp.Regexp
+}
+
+func (m myGogsDeducer) deduceRoot(path string) (string, error) {
+	v := m.regexp.FindStringSubmatch(path)
+	if v == nil {
+		return "", fmt.Errorf("%s is not a valid path for a source on my gogs", path)
+	}
+
+	return v[1], nil
+}
+
+func (m myGogsDeducer) deduceSource(path string, u *url.URL) (maybeSources, error) {
+	v := m.regexp.FindStringSubmatch(path)
+	if v == nil {
+		return nil, fmt.Errorf("%s is not a valid path for a source on my gogs", path)
+	}
+
+	pathAry := strings.Split(path, "/")
+	u.Host = pathAry[0]
+	u.Path = v[2]
+	u.Scheme = "ssh"
+	u.User = url.User("git")
+
+	return maybeSources{maybeGitSource{url: u}}, nil
+}
+
 // A deducer takes an import path and inspects it to determine where the
 // corresponding project root should be. It applies a number of matching
 // techniques, eventually falling back to an HTTP request for go-get metadata if
@@ -661,6 +690,22 @@ func (dc *deductionCoordinator) deduceKnownPaths(path string) (pathDeduction, er
 	u, path, err := normalizeURI(path)
 	if err != nil {
 		return pathDeduction{}, err
+	}
+
+	// my gogs customize
+	if myGogsRegex.MatchString(path) {
+		my := myGogsDeducer{regexp: myGogsRegex}
+		if root, err := my.deduceRoot(path); err == nil {
+			mb, err := my.deduceSource(path, u)
+			if err != nil {
+				return pathDeduction{}, err
+			}
+
+			return pathDeduction{
+				root: root,
+				mb:   mb,
+			}, nil
+		}
 	}
 
 	// First, try the root path-based matches
